@@ -197,6 +197,30 @@ pub mod queries {
             })
             .collect())
     }
+    
+    pub async fn get_user_todo_by_id(
+        pool: &SqlitePool,
+        user_id:i64,
+        todo_id:i64,
+    ) ->Result<Option<Todo>,sqlx::Error>{
+        let row = sqlx::query!(
+            "SELECT id, title, completed, created_at, updated_at, user_id FROM todos WHERE user_id = ? AND id = ? ORDER BY created_at DESC",
+            user_id,
+            todo_id
+        )
+        .fetch_optional(pool)
+        .await?;
+        
+        Ok(row.map(|row| Todo {
+            id: row.id,
+            title: row.title,
+            completed: row.completed,
+            created_at: row.created_at.map(|dt| dt.to_string()).unwrap_or_default(),
+            updated_at: row.updated_at.map(|dt| dt.to_string()).unwrap_or_default(),
+            user_id: row.user_id,
+        }))
+        
+    }
 
     pub async fn create_user_todo(
         pool: &SqlitePool,

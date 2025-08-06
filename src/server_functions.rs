@@ -22,6 +22,21 @@ pub async fn get_todos() -> Result<Vec<Todo>, ServerFnError> {
         Err(ServerFnError::ServerError("Not authenticated".to_string()))
     }
 }
+#[server(GetTodoById,"/api")]
+pub async fn get_todo_by_id(id:i64)->Result<Option<Todo>,ServerFnError>{
+    let pool = expect_context::<SqlitePool>();
+    
+    let current_user = get_current_user().await?;
+    
+    if let Some(user) = current_user {
+        queries::get_user_todo_by_id(&pool, user.id, id)
+            .await
+            .map_err(|e| ServerFnError::ServerError(e.to_string()))
+    } else {
+        Err(ServerFnError::ServerError("Not authenticated".to_string()))
+    }
+    
+}
 
 #[server(AddTodo, "/api")]
 pub async fn add_todo(todo: CreateTodo) -> Result<Todo, ServerFnError> {

@@ -154,6 +154,9 @@ fn TodoApp(user: User) -> impl IntoView {
     let delete_todo_action = ServerAction::<DeleteTodo>::new();
 
     let (new_todo_title, set_new_todo_title) = signal(String::new());
+    let (search_id, set_search_id) = signal(String::new());
+    let (search_result, set_search_result) = signal(None::<Option<Todo>>);
+    let (search_error, set_search_error) = signal(None::<String>);
 
     let submit_todo = move |ev: leptos::ev::SubmitEvent| {
         ev.prevent_default();
@@ -165,6 +168,30 @@ fn TodoApp(user: User) -> impl IntoView {
                 },
             });
             set_new_todo_title.set(String::new());
+        }
+    };
+
+    let search_todo = move |ev: leptos::ev::SubmitEvent| {
+        ev.prevent_default();
+        let id_str = search_id.get();
+        if !id_str.trim().is_empty() {
+            if let Ok(id) = id_str.trim().parse::<i64>() {
+                spawn_local(async move {
+                    set_search_error.set(None);
+                    match get_todo_by_id(id).await {
+                        Ok(todo) => {
+                            set_search_result.set(Some(todo));
+                        }
+                        Err(e) => {
+                            set_search_result.set(None);
+                            set_search_error.set(Some(e.to_string()));
+                        }
+                    }
+                });
+            } else {
+                set_search_error.set(Some("Please enter a valid number".to_string()));
+                set_search_result.set(None);
+            }
         }
     };
 
@@ -193,6 +220,41 @@ fn TodoApp(user: User) -> impl IntoView {
                     <button type="submit">"Add"</button>
                 </div>
             </form>
+
+            <form on:submit=search_todo class="search-form">
+                <div class="input-group">
+                    <input
+                        type="text"
+                        placeholder="Search by todo ID..."
+                        prop:value=search_id
+                        on:input=move |ev| set_search_id.set(event_target_value(&ev))
+                    />
+                    <button type="submit">"Search"</button>
+                </div>
+            </form>
+
+            {move || {
+                if let Some(error) = search_error.get() {
+                    view! { <p class="error">"Search error: " {error}</p> }.into_any()
+                } else if let Some(result) = search_result.get() {
+                    if let Some(todo) = result {
+                        view! {
+                            <div class="search-result">
+                                <h3>"Search Result:"</h3>
+                                <div class="todo-item">
+                                    <span class="todo-id">"ID: " {todo.id}</span>
+                                    <span class="todo-title" class:completed=todo.completed>{todo.title}</span>
+                                    <span class="todo-status">{if todo.completed { "✓ Completed" } else { "○ Pending" }}</span>
+                                </div>
+                            </div>
+                        }.into_any()
+                    } else {
+                        view! { <p class="no-result">"No todo found with that ID"</p> }.into_any()
+                    }
+                } else {
+                    view! { <div></div> }.into_any()
+                }
+            }}
 
             <Suspense fallback=move || view! { <p class="loading">"Loading todos..."</p> }>
                 {move || {
@@ -224,6 +286,7 @@ fn TodoApp(user: User) -> impl IntoView {
                                                                     });
                                                                 }
                                                             />
+                                                            <span class="todo-id">"ID: " {todo_id} " - "</span>
                                                             <span class="todo-title">{todo_title}</span>
                                                         </div>
                                                         <button

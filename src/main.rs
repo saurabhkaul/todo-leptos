@@ -18,20 +18,10 @@ async fn main() {
 
     let pool = create_pool().await.expect("Failed to create database pool");
 
-    // Generate the list of routes in your Leptos App
+    
     let routes = generate_route_list(App);
 
-    // Create app state that includes both leptos options and database pool
-    // #[derive(Clone)]
-    // struct AppState {
-    //     leptos_options: LeptosOptions,
-    //     pool: SqlitePool,
-    // }
-
-    // let app_state = AppState {
-    //     leptos_options: leptos_options.clone(),
-    //     pool: pool.clone(),
-    // };
+    
 
     let app = Router::new()
         .leptos_routes_with_context(
